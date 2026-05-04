@@ -1,0 +1,153 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Scan Uang</title>
+    <style>
+      body {
+        font-family: Arial;
+        text-align: center;
+      }
+
+      video,
+      img {
+        border-radius: 10px;
+      }
+
+      button {
+        padding: 10px 20px;
+        background: green;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: darkgreen;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Scan Uang</h2>
+
+    <!-- Video kamera -->
+    <video id="video" width="300" autoplay playsinline></video>
+    <br /><br />
+
+    <!-- Tombol capture -->
+    <button onclick="capture()">Scan</button>
+
+    <br /><br />
+
+    <!-- Hasil gambar -->
+    <canvas id="canvas" style="display: none"></canvas>
+    <img id="result" width="300" />
+
+    <!-- History scan -->
+    <h3>History Scan</h3>
+    <ul id="historyList"></ul>
+
+    <!-- POS Summary -->
+    <h3>POS Summary</h3>
+    <p id="totalScan"></p>
+    <p id="totalAsli"></p>
+    <p id="totalPalsu"></p>
+
+    <p id="resultText"></p>
+
+    <script>
+      const video = document.getElementById("video");
+
+      // akses kamera
+      navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then((stream) => {
+          video.srcObject = stream;
+        })
+        .catch((err) => {
+          alert("Tidak bisa akses kamera: " + err);
+        });
+
+      // capture gambar
+      function capture() {
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        ctx.drawImage(video, 0, 0);
+
+        const imageData = canvas.toDataURL("image/jpeg", 0.5);
+        document.getElementById("result").src = imageData;
+
+        // kirim ke backend (SUDAH FIX 🔥)
+        fetch("/scan-uang", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            image: imageData,
+          }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            document.getElementById("resultText").innerText =
+              "Hasil: " + data.hasil + " (" + data.confidence + ")";
+
+            loadHistory();
+            loadPOS();
+          })
+          .catch((err) => {
+            console.error(err);
+            alert("Gagal kirim ke server");
+          });
+      }
+
+      // load history
+      function loadHistory() {
+        fetch("/history")
+          .then((res) => res.json())
+          .then((data) => {
+            const list = document.getElementById("historyList");
+            list.innerHTML = "";
+
+            data.forEach((item) => {
+              const li = document.createElement("li");
+
+              li.innerHTML = `
+                <div style="border:1px solid #ccc; margin:10px; padding:10px;">
+                  <img src="${item.image}" width="150"/><br>
+                  <b>${item.result}</b><br>
+                  Confidence: ${item.confidence}
+                </div>
+              `;
+
+              list.appendChild(li);
+            });
+          });
+      }
+
+      // load POS
+      function loadPOS() {
+        fetch("/pos-summary")
+          .then((res) => res.json())
+          .then((data) => {
+            document.getElementById("totalScan").innerText =
+              "Total Scan: " + data.total_scan;
+
+            document.getElementById("totalAsli").innerText =
+              "Uang Asli: " + data.total_asli;
+
+            document.getElementById("totalPalsu").innerText =
+              "Uang Palsu: " + data.total_palsu;
+          });
+      }
+
+      // load awal
+      loadHistory();
+      loadPOS();
+    </script>
+  </body>
+</html>

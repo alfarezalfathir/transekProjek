@@ -1,15 +1,16 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const mysql = require("mysql2");
+const { spawn } = require("child_process");
 
 const app = express();
 
-const mysql = require("mysql2");
-
+// ================= DATABASE =================
 const db = mysql.createConnection({
   host: "localhost",
   user: "root",
-  password: "", // default Laragon kosong
+  password: "",
   database: "money_detector",
 });
 
@@ -21,68 +22,74 @@ db.connect((err) => {
   }
 });
 
-// middleware
+// ================= MIDDLEWARE =================
 app.use(cors());
-// app.use(express.json());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
 app.use(express.static("frontend"));
 app.use(express.static(path.join(__dirname, "public")));
 
-// route utama (test)
+// ================= ROUTE =================
+
+// halaman utama
 app.get("/", (req, res) => {
   res.sendFile(__dirname + "/frontend/index.html");
 });
 
-// TEST KONEKSI
+// test database
 app.get("/test-db", (req, res) => {
-  db.query("SELECT 1", (err, result) => {
-    if (err) {
-      res.send("Database error");
-    } else {
-      res.send("Database connected!");
-    }
+  db.query("SELECT 1", (err) => {
+    if (err) return res.send("Database error");
+    res.send("Database connected!");
   });
 });
 
-// Tambahkan API Insertdata hasil scan ke database
-app.get("/test-insert", (req, res) => {
-  const sql = "INSERT INTO scans (image, result, confidence) VALUES (?, ?, ?)";
-
-  db.query(sql, ["test_image", "asli", 0.9], (err, result) => {
-    if (err) {
-      console.error(err);
-      res.send("Gagal insert data");
-    } else {
-      res.send("Data berhasil disimpan!");
-    }
-  });
-});
-
-// API untuk menerima hasil scan dari frontend
+// ================= SCAN UANG =================
 app.post("/scan-uang", (req, res) => {
   const { image } = req.body;
 
-  // dummy hasil dulu
-  const hasil = "kemungkinan asli";
-  const confidence = 0.8;
+  const py = spawn("python", ["detect.py"]);
 
-  const sql = "INSERT INTO scans (image, result, confidence) VALUES (?, ?, ?)";
+  py.stdin.write(JSON.stringify({ image: image }));
+  py.stdin.end();
 
-  db.query(sql, [image, hasil, confidence], (err, resultDB) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: "Gagal simpan data" });
+  let data = "";
+
+  py.stdout.on("data", (chunk) => {
+    data += chunk.toString();
+  });
+
+  py.stderr.on("data", (err) => {
+    console.error("Python error:", err.toString());
+  });
+
+  py.on("close", () => {
+    try {
+      const result = JSON.parse(data);
+
+      const sql =
+        "INSERT INTO scans (image, result, confidence) VALUES (?, ?, ?)";
+
+      db.query(sql, [image, result.hasil, result.confidence], (err) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: "Gagal simpan data" });
+        }
+
+        res.json(result);
+      });
+    } catch (err) {
+      console.error("Parse error:", err);
+      res.json({
+        hasil: "error deteksi",
+        confidence: 0,
+      });
     }
-
-    res.json({
-      hasil: hasil,
-      confidence: confidence,
-    });
   });
 });
 
-// API untuk ambil history scan
+// ================= HISTORY =================
 app.get("/history", (req, res) => {
   const sql = "SELECT * FROM scans ORDER BY created_at DESC";
 
@@ -96,27 +103,28 @@ app.get("/history", (req, res) => {
   });
 });
 
-// API untuk ambil summary hasil scan
-app.get("/pos-summary", (req, res) => {
+// ================= SUMMARY (FIX DOSEN 🔥) =================
+app.get("/summary", (req, res) => {
   const sql = `
     SELECT 
-      COUNT(*) as total_scan,
-      SUM(CASE WHEN result LIKE '%asli%' THEN 1 ELSE 0 END) as total_asli,
-      SUM(CASE WHEN result LIKE '%palsu%' THEN 1 ELSE 0 END) as total_palsu
+      COUNT(*) as total,
+      SUM(CASE WHEN result = 'asli' THEN 1 ELSE 0 END) as asli,
+      SUM(CASE WHEN result = 'kemungkinan asli' THEN 1 ELSE 0 END) as kemungkinan,
+      SUM(CASE WHEN result = 'palsu' THEN 1 ELSE 0 END) as palsu
     FROM scans
   `;
 
   db.query(sql, (err, result) => {
     if (err) {
       console.error(err);
-      return res.status(500).json({ error: "Gagal ambil data POS" });
+      return res.status(500).json({ error: "Gagal ambil summary" });
     }
 
     res.json(result[0]);
   });
 });
 
-// jalankan server
+// ================= RUN SERVER =================
 app.listen(3000, () => {
   console.log("Server running on http://localhost:3000");
 });

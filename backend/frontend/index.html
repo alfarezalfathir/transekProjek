@@ -1,56 +1,65 @@
 <!doctype html>
 <html>
   <head>
-    <title>Scan Uang</title>
+    <title>Smart Money Detector POS</title>
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
       body {
         font-family: Arial, sans-serif;
-        background: #0f172a;
+        background: linear-gradient(to bottom, #0f172a, #111827);
         color: white;
-        margin: 0;
       }
 
       .container {
-        max-width: 420px;
+        max-width: 430px;
         margin: auto;
         padding: 15px;
       }
 
-      h2 {
+      h1 {
         text-align: center;
-        margin-bottom: 5px;
+        font-size: 26px;
+        margin-top: 10px;
       }
 
       .subtitle {
         text-align: center;
-        font-size: 13px;
         color: #94a3b8;
-        margin-bottom: 15px;
+        font-size: 13px;
+        margin-bottom: 20px;
       }
 
       .card {
-        background: #1e293b;
+        background: rgba(30, 41, 59, 0.95);
         padding: 15px;
-        border-radius: 14px;
+        border-radius: 18px;
         margin-bottom: 15px;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
       }
 
       video,
       img {
         width: 100%;
-        border-radius: 12px;
+        border-radius: 14px;
       }
 
       button {
         width: 100%;
-        padding: 14px;
         border: none;
-        border-radius: 10px;
-        font-size: 16px;
-        cursor: pointer;
+        padding: 14px;
         margin-top: 10px;
+        border-radius: 12px;
+        font-size: 15px;
+        font-weight: bold;
+        cursor: pointer;
       }
 
       .scan {
@@ -63,19 +72,60 @@
         color: white;
       }
 
+      .scan:hover {
+        opacity: 0.9;
+      }
+
+      .switch:hover {
+        opacity: 0.9;
+      }
+
       #status {
         text-align: center;
-        margin-top: 10px;
+        margin-top: 12px;
         font-weight: bold;
+        font-size: 16px;
       }
 
-      /* 🔥 SUMMARY */
-      .summary p {
-        margin: 5px 0;
-        font-size: 14px;
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-top: 10px;
       }
 
-      /* HISTORY GRID */
+      .summary-box {
+        background: #0f172a;
+        border-radius: 12px;
+        padding: 12px;
+        text-align: center;
+      }
+
+      .summary-box h3 {
+        font-size: 22px;
+      }
+
+      .summary-box p {
+        font-size: 12px;
+        color: #94a3b8;
+      }
+
+      .green {
+        color: lightgreen;
+      }
+
+      .yellow {
+        color: yellow;
+      }
+
+      .red {
+        color: #ff6b6b;
+      }
+
+      .blue {
+        color: #60a5fa;
+      }
+
       #historyList {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
@@ -83,45 +133,90 @@
       }
 
       .history-card {
-        background: #1e293b;
+        background: #0f172a;
+        border-radius: 12px;
         padding: 8px;
-        border-radius: 10px;
         text-align: center;
       }
 
       .history-card img {
         width: 100%;
-        border-radius: 8px;
+        border-radius: 10px;
       }
 
       .history-card p {
         font-size: 12px;
-        margin: 4px 0;
+        margin-top: 4px;
+      }
+
+      canvas {
+        display: none;
       }
     </style>
   </head>
 
   <body>
     <div class="container">
-      <h2>💸 Scan Uang</h2>
-      <p class="subtitle">Gunakan cahaya dari belakang 🔦</p>
+      <h1>💸 Smart Money</h1>
+      <p class="subtitle">
+        POS & Payment Detection System using Computer Vision
+      </p>
 
-      <!-- 🔥 SUMMARY -->
-      <div class="card summary">
-        <h3>📊 Summary</h3>
-        <p>Total: <span id="total">0</span></p>
-        <p style="color: lightgreen">Asli: <span id="asli">0</span></p>
-        <p style="color: yellow">
-          Kemungkinan: <span id="kemungkinan">0</span>
-        </p>
-        <p style="color: red">Palsu: <span id="palsu">0</span></p>
+      <!-- SUMMARY -->
+      <div class="card">
+        <h2>📊 POS Summary</h2>
+
+        <div class="summary-grid">
+          <div class="summary-box">
+            <h3 id="total">0</h3>
+            <p>Total Scan</p>
+          </div>
+
+          <div class="summary-box">
+            <h3 class="green" id="asli">0</h3>
+            <p>Asli</p>
+          </div>
+
+          <div class="summary-box">
+            <h3 class="yellow" id="kemungkinan">0</h3>
+            <p>Kemungkinan</p>
+          </div>
+
+          <div class="summary-box">
+            <h3 class="red" id="palsu">0</h3>
+            <p>Palsu</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAYMENT -->
+      <div class="card">
+        <h2>💳 Payment System</h2>
+
+        <div class="summary-grid">
+          <div class="summary-box">
+            <h3 class="green" id="cash">0</h3>
+            <p>Cash</p>
+          </div>
+
+          <div class="summary-box">
+            <h3 class="blue" id="debit">0</h3>
+            <p>Debit</p>
+          </div>
+
+          <div class="summary-box">
+            <h3 class="yellow" id="digital">0</h3>
+            <p>E-Wallet</p>
+          </div>
+        </div>
       </div>
 
       <!-- CAMERA -->
       <div class="card">
         <video id="video" autoplay playsinline></video>
 
-        <button class="scan" onclick="capture()">📸 Scan Sekarang</button>
+        <button class="scan" onclick="capture()">📸 Scan Uang Sekarang</button>
+
         <button class="switch" onclick="switchCamera()">🔄 Ganti Kamera</button>
 
         <p id="status">Status: siap scan</p>
@@ -129,17 +224,18 @@
 
       <!-- RESULT -->
       <div class="card">
+        <h2>🧠 AI Detection Result</h2>
         <img id="result" />
       </div>
 
       <!-- HISTORY -->
       <div class="card">
-        <h3>📊 History</h3>
+        <h2>🧾 Transaction History</h2>
         <div id="historyList"></div>
       </div>
     </div>
 
-    <canvas id="canvas" style="display: none"></canvas>
+    <canvas id="canvas"></canvas>
 
     <script>
       let video = document.getElementById("video");
@@ -152,7 +248,9 @@
         }
 
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: useFrontCamera ? "user" : "environment" },
+          video: {
+            facingMode: useFrontCamera ? "user" : "environment",
+          },
         });
 
         video.srcObject = stream;
@@ -175,49 +273,61 @@
 
         const imageData = canvas.toDataURL("image/png");
 
-        document.getElementById("status").innerText = "Scanning...";
+        document.getElementById("status").innerText = "🔍 Scanning...";
 
         fetch("/scan-uang", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image: imageData }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            image: imageData,
+          }),
         })
           .then((res) => res.json())
           .then((data) => {
             const status = document.getElementById("status");
 
-            status.innerText = `Hasil: ${data.hasil} (${data.confidence.toFixed(2)})`;
+            status.innerText =
+              "Hasil: " + data.hasil + " (" + data.confidence.toFixed(2) + ")";
 
-            if (data.hasil === "asli") status.style.color = "lightgreen";
-            else if (data.hasil === "kemungkinan asli")
+            if (data.hasil === "asli") {
+              status.style.color = "lightgreen";
+            } else if (data.hasil === "kemungkinan asli") {
               status.style.color = "yellow";
-            else status.style.color = "red";
+            } else {
+              status.style.color = "#ff6b6b";
+            }
 
             ctx.drawImage(video, 0, 0);
 
             if (data.box) {
               const [x, y, w, h] = data.box;
+
               ctx.strokeStyle = "red";
-              ctx.lineWidth = 3;
+              ctx.lineWidth = 4;
               ctx.strokeRect(x, y, w, h);
             }
 
-            document.getElementById("result").src = canvas.toDataURL();
+            document.getElementById("result").src =
+              canvas.toDataURL("image/png");
 
             loadHistory();
-            loadSummary(); // 🔥 update counter
+            loadSummary();
+            loadPayment();
           })
-          .catch(() => {
+          .catch((err) => {
+            console.log(err);
             alert("Gagal scan");
           });
       }
 
-      // 🔥 HISTORY
       function loadHistory() {
         fetch("/history")
           .then((res) => res.json())
           .then((data) => {
             const container = document.getElementById("historyList");
+
             container.innerHTML = "";
 
             data.forEach((item) => {
@@ -226,20 +336,21 @@
                   ? "lightgreen"
                   : item.result === "kemungkinan asli"
                     ? "yellow"
-                    : "red";
+                    : "#ff6b6b";
 
               container.innerHTML += `
-                <div class="history-card">
-                  <img src="${item.image}" />
-                  <p style="color:${color}"><b>${item.result}</b></p>
-                  <p>${parseFloat(item.confidence).toFixed(2)}</p>
-                </div>
-              `;
+              <div class="history-card">
+                <img src="${item.image}" />
+                <p style="color:${color}">
+                  <b>${item.result}</b>
+                </p>
+                <p>${parseFloat(item.confidence).toFixed(2)}</p>
+              </div>
+            `;
             });
           });
       }
 
-      // 🔥 SUMMARY
       function loadSummary() {
         fetch("/summary")
           .then((res) => res.json())
@@ -252,10 +363,20 @@
           });
       }
 
-      // INIT
+      function loadPayment() {
+        fetch("/payment-summary")
+          .then((res) => res.json())
+          .then((data) => {
+            document.getElementById("cash").innerText = data.cash;
+            document.getElementById("debit").innerText = data.debit;
+            document.getElementById("digital").innerText = data.digital;
+          });
+      }
+
       startCamera();
       loadHistory();
       loadSummary();
+      loadPayment();
     </script>
   </body>
 </html>
